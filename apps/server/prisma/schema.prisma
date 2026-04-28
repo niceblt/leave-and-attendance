@@ -1,0 +1,88 @@
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  ADMIN
+  HR
+  EMPLOYEE
+}
+
+model User {
+  id                 String   @id @default(cuid())
+  email              String   @unique
+  password           String // hashed
+  role               UserRole @default(EMPLOYEE)
+  firstName          String
+  lastName           String
+  isActive           Boolean  @default(true)
+  mustChangePassword Boolean  @default(true)
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  lastLoginAt DateTime?
+
+  attendances Attendance[]
+
+  @@index([email])
+  @@index([role])
+}
+
+model OfficeLocation {
+  id        String  @id @default(cuid())
+  name      String // "Head Office", "Branch 1"
+  latitude  Float
+  longitude Float
+  radius    Int     @default(100) // meters
+  isActive  Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  attendances Attendance[]
+}
+
+enum AttendanceStatus {
+  PRESENT // Check-in successful
+  LATE // Check-in after 9:00 AM
+  ABSENT // No check-in
+  HALF_DAY // Only check-in OR check-out
+}
+
+model Attendance {
+  id     String   @id @default(cuid())
+  userId String
+  date   DateTime @db.Timestamptz(3)
+
+  checkInTime     DateTime?
+  checkInLat      Float?
+  checkInLng      Float?
+  checkInDistance Float? // Distance from office (meters)
+
+  checkOutTime     DateTime?
+  checkOutLat      Float?
+  checkOutLng      Float?
+  checkOutDistance Float?
+
+  status AttendanceStatus[] @default([PRESENT])
+  notes  String?
+
+  officeLocationId String?
+  officeLocation   OfficeLocation? @relation(fields: [officeLocationId], references: [id])
+
+  user User @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, date])
+  @@index([userId])
+  @@index([date])
+  @@index([status])
+}

@@ -1,11 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { CreateAuthenticationDto } from './dto/create-authentication.dto';
+import { PrismaService } from 'src/prisma/prisma.service';
+import { BcryptService } from '../hashing/bcrypt.service';
 
 @Injectable()
 export class AuthenticationService {
-  create(createAuthenticationDto: CreateAuthenticationDto) {
-    return 'This action adds a new authentication';
-  }
-
- 
+  constructor(
+    private readonly bcryptService: BcryptService,
+    private readonly prismaService: PrismaService,
+  ) {}
 }
