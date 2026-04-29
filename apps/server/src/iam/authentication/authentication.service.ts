@@ -7,11 +7,19 @@ import {
 } from '@nestjs/common';
 import type { ConfigType } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/client';
+import { randomUUID } from 'crypto';
+import { User } from 'src/generated/prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
 import jwtConfig from '../config/jwt.config';
 import { BcryptService } from '../hashing/bcrypt.service';
 import { ActiveUserData } from '../interfaces/active-user-data.interface';
+import { RefreshTokensDto } from './dto/refresh-tokens.dto';
 import { SignInDto } from './dto/sign-in.dto';
+import {
+  InvalidatedRefreshTokenError,
+  RefreshTokenIdsStorage,
+} from './refresh-token-ids.storage';
 
 @Injectable()
 export class AuthenticationService {
@@ -21,6 +29,7 @@ export class AuthenticationService {
     @Inject(jwtConfig.KEY)
     private readonly jwtConfiguration: ConfigType<typeof jwtConfig>,
     private readonly jwtService: JwtService,
+    private readonly refreshTokenIdsStorage: RefreshTokenIdsStorage,
   ) {}
 
   async signIn(@Body() signInDto: SignInDto) {
@@ -47,13 +56,9 @@ export class AuthenticationService {
       throw new UnauthorizedException('Invalid password');
     }
 
-    const accessToken = await this.signToken<Partial<ActiveUserData>>(
-      user.id,
-      this.jwtConfiguration.accessTokenTtl,
-      { email: user.email, role: user.role },
-    );
+    const [accessToken, refreshToken] = await this.generateTokens(user);
     const { password: _, ..._user } = user;
-    return { accessToken, refreshToken: null, user: _user };
+    return { accessToken, refreshToken, user: _user };
   }
 
   async me(id: string) {
@@ -87,5 +92,60 @@ export class AuthenticationService {
         expiresIn,
       },
     );
+  }
+
+  async generateTokens(user: Pick<User, 'id' | 'email' | 'role'>) {
+    const refreshTokenId = randomUUID();
+
+    const [accessToken, refreshToken] = await Promise.all([
+      this.signToken(user.id, this.jwtConfiguration.accessTokenTtl, {
+        email: user.email,
+        role: user.role,
+      }),
+      this.signToken(user.id, this.jwtConfiguration.refreshTokenTtl, {
+        refreshTokenId,
+      }),
+    ]);
+
+    await this.refreshTokenIdsStorage.insert(user.id, refreshTokenId);
+    return [accessToken, refreshToken];
+  }
+
+  async refreshTokens(refreshTokenDto: RefreshTokensDto) {
+    try {
+      const { sub, refreshTokenId } = await this.jwtService.verifyAsync<
+        Pick<ActiveUserData, 'sub'> & { refreshTokenId: string }
+      >(refreshTokenDto.refreshToken, {
+        secret: this.jwtConfiguration.secret,
+        audience: this.jwtConfiguration.audience,
+        issuer: this.jwtConfiguration.issuer,
+      });
+      const user = await this.prismaService.user.findFirstOrThrow({
+        where: { id: sub },
+      });
+
+      const isValid = await this.refreshTokenIdsStorage.validate(
+        user.id,
+        refreshTokenId,
+      );
+
+      if (isValid) {
+        await this.refreshTokenIdsStorage.invalidate(user.id);
+      } else {
+        throw new InvalidatedRefreshTokenError();
+      }
+      const [accessToken, refreshToken] = await this.generateTokens(user);
+      return { accessToken, refreshToken };
+    } catch (error) {
+      if (error instanceof PrismaClientKnownRequestError) {
+        if (error.code === 'P2025') {
+          throw new InvalidatedRefreshTokenError();
+        }
+      }
+
+      if (error instanceof InvalidatedRefreshTokenError) {
+        throw new UnauthorizedException('Invalid refresh token.');
+      }
+    }
   }
 }

@@ -11,6 +11,7 @@ import type { Response } from 'express';
 import { ActiveUser } from '../decorators/active-user.decorator';
 import { AuthenticationService } from './authentication.service';
 import { Auth } from './decorators/auth.decorator';
+import { RefreshTokensDto } from './dto/refresh-tokens.dto';
 import { SignInDto } from './dto/sign-in.dto';
 import { AuthType } from './enums/auth-type.enum';
 
@@ -37,5 +38,12 @@ export class AuthenticationController {
   @Get('me')
   async me(@ActiveUser('sub') id: string) {
     return this.authenticationService.me(id);
+  }
+
+  @HttpCode(HttpStatus.OK)
+  @Post('refresh-token')
+  @Auth(AuthType.None)
+  async refreshToken(@Body() RefreshTokensDto: RefreshTokensDto) {
+    return this.authenticationService.refreshTokens(RefreshTokensDto);
   }
 }
