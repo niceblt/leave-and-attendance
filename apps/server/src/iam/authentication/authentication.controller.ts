@@ -7,6 +7,7 @@ import {
   Post,
   Res,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import type { Response } from 'express';
 import { ActiveUser } from '../decorators/active-user.decorator';
 import { AuthenticationService } from './authentication.service';
@@ -22,6 +23,7 @@ export class AuthenticationController {
 
   @HttpCode(HttpStatus.OK)
   @Post('login')
+  @Throttle({ default: { ttl: 600000, limit: 5 } })
   @Auth(AuthType.None)
   async signIn(@Body() signInDto: SignInDto) {
     return this.authenticationService.signIn(signInDto);
