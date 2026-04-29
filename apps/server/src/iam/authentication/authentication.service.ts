@@ -2,6 +2,7 @@ import {
   Body,
   Inject,
   Injectable,
+  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import type { ConfigType } from '@nestjs/config';
@@ -55,6 +56,24 @@ export class AuthenticationService {
     return { accessToken, refreshToken: null, user: _user };
   }
 
+  async me(id: string) {
+    const user = await this.prismaService.user.findFirst({
+      where: { id: id },
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        firstName: true,
+        lastName: true,
+      },
+    });
+
+    if (user === undefined) {
+      throw new NotFoundException();
+    }
+
+    return { user };
+  }
   private async signToken<T>(userId: string, expiresIn: number, payload?: T) {
     return await this.jwtService.signAsync(
       {
