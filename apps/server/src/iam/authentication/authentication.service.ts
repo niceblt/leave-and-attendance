@@ -34,6 +34,7 @@ export class AuthenticationService {
 
   async signIn(@Body() signInDto: SignInDto) {
     const { email, password } = signInDto;
+    console.log('hello world');
     const user = await this.prismaService.user.findFirst({
       where: { email: email },
       select: {
@@ -46,7 +47,7 @@ export class AuthenticationService {
       },
     });
 
-    if (user === null) {
+    if (!user) {
       throw new UnauthorizedException("User doesn't exist");
     }
 

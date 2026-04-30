@@ -25,11 +25,14 @@ export class AccessTokenGuard implements CanActivate {
       throw new UnauthorizedException();
     }
 
+    // To-do: Enforce changing password if it's a new user
+
     try {
       const payload = await this.jwtService.verifyAsync(
         token,
         this.jwtConfiguration,
       );
+
       request[REQUEST_USER_KEY] = payload;
     } catch (error) {
       throw new UnauthorizedException();
