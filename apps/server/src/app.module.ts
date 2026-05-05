@@ -7,6 +7,7 @@ import { AppService } from './app.service';
 import { IamModule } from './iam/iam.module';
 import { PrismaService } from './prisma/prisma.service';
 import { UsersModule } from './users/users.module';
+import { AttendanceModule } from './attendance/attendance.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { UsersModule } from './users/users.module';
     IamModule,
     UsersModule,
     ThrottlerModule.forRoot({ throttlers: [{ ttl: 0, limit: 0 }] }),
+    AttendanceModule,
   ],
   controllers: [AppController],
   providers: [

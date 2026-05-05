@@ -70,7 +70,7 @@ model Attendance {
   checkOutLng      Float?
   checkOutDistance Float?
 
-  status AttendanceStatus[] @default([PRESENT])
+  status AttendanceStatus @default(PRESENT)
   notes  String?
 
   officeLocationId String?
@@ -86,3 +86,8 @@ model Attendance {
   @@index([date])
   @@index([status])
 }
+
+// model Setting {
+//   minimumCheckInTime DateTime @default()
+//   minimumWorkHours Int @default(9)
+// }
