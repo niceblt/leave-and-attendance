@@ -14,8 +14,8 @@ export default function Login() {
   const { form, error, handleSubmit } = useLogin();
 
   return (
-    <div className="w-full h-full flex flex-col items-center justify-center">
-      <form onSubmit={handleSubmit} className="min-w-60 ">
+    <div className="flex h-full w-full flex-col items-center justify-center">
+      <form onSubmit={handleSubmit} className="min-w-60">
         <FieldGroup className="">
           <form.Field
             name="email"

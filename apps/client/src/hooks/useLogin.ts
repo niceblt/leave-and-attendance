@@ -12,7 +12,7 @@ export default function useLogin() {
   const router = useRouter();
   const form = useForm({
     defaultValues: {
-      email: "admin@email.com",
+      email: "user@email.com",
       password: "12345678",
     },
     validators: {
@@ -21,15 +21,18 @@ export default function useLogin() {
       onChange: loginSchema,
     },
     onSubmit: async ({ value }) => {
-      const result = await fetch(`http://localhost:3000/api/auth/login`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+      const result = await fetch(
+        `${process.env.NEXT_PUBLIC_SERVER_URL}/api/auth/login`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(value),
+          cache: "no-store",
+          credentials: "include",
         },
-        body: JSON.stringify(value),
-        cache: "no-store",
-        credentials: "include",
-      });
+      );
 
       const response = await result.json();
       if (!result.ok) {

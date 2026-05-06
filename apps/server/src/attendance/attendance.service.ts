@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   UnauthorizedException,
@@ -22,11 +23,11 @@ export class AttendanceService {
     const isExisting = await this.hasCheckedIn(id);
 
     if (isExisting) {
-      throw new ConflictException('This user already checked in today.');
+      throw new BadRequestException('This user already checked in today.');
     }
 
     const currentTime = new Date();
-    return await this.prismaService.attendance.create({
+    const attendance = await this.prismaService.attendance.create({
       data: {
         userId: id,
         date: currentTime,
@@ -35,33 +36,54 @@ export class AttendanceService {
         checkInLng: 1,
         checkInDistance: 1,
       },
+      select: {
+        id: true,
+        checkInTime: true,
+        checkInDistance: true,
+        status: true,
+      },
     });
+
+    return { attendance, message: 'Check-in successful' };
   }
 
   async checkOut(id: string) {
-    const isExisting = await this.hasCheckedIn(id);
+    const hasCheckedIn = await this.hasCheckedIn(id);
+    const hasCheckedOut = await this.hasCheckedOut(id);
 
-    if (!isExisting) {
+    if (!hasCheckedIn) {
       throw new ConflictException('User needs to check in first');
+    }
+
+    if (hasCheckedOut) {
+      throw new ConflictException('Already checked out');
     }
 
     const currentTime = new Date();
 
-    return await this.prismaService.attendance.update({
-      where: { id: isExisting.id },
+    const attendance = await this.prismaService.attendance.update({
+      where: { id: hasCheckedIn.id },
       data: {
         checkOutTime: currentTime,
         checkOutLng: 1,
         checkOutDistance: 1,
         checkOutLat: 1,
       },
+      select: { id: true, checkInTime: true, checkOutTime: true },
     });
+
+    const totalHours = Math.floor(
+      (attendance.checkOutTime!.getTime() - attendance.checkInTime!.getTime()) /
+        3_600_000,
+    );
+    return { attendance: { ...attendance, totalHours } };
   }
 
   async status(id: string) {
     return {
       minimumCheckInTime: this.MINIMUM_CHECK_IN_TIME,
       hasCheckedIn: (await this.hasCheckedIn(id)) ? true : false,
+      hasCheckedOut: (await this.hasCheckedOut(id)) ? true : false,
     };
   }
 
@@ -73,6 +95,19 @@ export class AttendanceService {
       where: {
         userId: id,
         checkInTime: { not: null },
+        createdAt: { lte: endOfToday, gte: startOfToday },
+      },
+    });
+  }
+
+  private async hasCheckedOut(id: string) {
+    const today = new Date();
+    const startOfToday = new Date(today.setHours(0, 0, 0, 0));
+    const endOfToday = new Date(today.setDate(today.getDate() + 1));
+    return await this.prismaService.attendance.findFirst({
+      where: {
+        userId: id,
+        checkOutTime: { not: null },
         createdAt: { lte: endOfToday, gte: startOfToday },
       },
     });
