@@ -6,6 +6,7 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/client';
 import { AttendanceStatus } from 'src/generated/prisma/client';
 import { GeolocationService } from 'src/geolocation/geolocation.service';
 import { PrismaService } from 'src/prisma/prisma.service';
@@ -73,28 +74,62 @@ export class AttendanceService {
     }
 
     const currentTime = new Date();
-    const attendance = await this.prismaService.attendance.create({
-      data: {
-        userId: id,
-        date: currentTime,
-        checkInTime: currentTime,
-        checkInLat: lat,
-        checkInLng: lon,
-        checkInDistance: distance,
-      },
-      select: {
-        id: true,
-        checkInTime: true,
-        checkInDistance: true,
-        status: true,
-      },
-    });
-
-    return { attendance, message: 'Check-in successful' };
+    try {
+      const attendance = await this.prismaService.attendance.create({
+        data: {
+          userId: id,
+          date: currentTime,
+          checkInTime: currentTime,
+          checkInLat: lat,
+          checkInLng: lon,
+          checkInDistance: distance,
+        },
+        select: {
+          id: true,
+          checkInTime: true,
+          checkInDistance: true,
+          status: true,
+        },
+      });
+      return { attendance, message: 'Check-in successful' };
+    } catch (error) {
+      if (error instanceof PrismaClientKnownRequestError) {
+        if (error.code === 'P2002') {
+          throw new ConflictException('You have already checked in today');
+        }
+      }
+      throw error;
+    }
   }
 
   async checkOut(id: string, requestDto: RequestDto) {
     const { lat, lon } = requestDto;
+
+    const officeLocation = await this.prismaService.officeLocation.findFirst();
+    if (!officeLocation) {
+      throw new BadRequestException('Office not found');
+    }
+    const { latitude: officeLat, longitude: officeLon } = officeLocation;
+    const { isWithinRadius, distance } = this.geolocationService.isWithinRadius(
+      lat,
+      lon,
+      officeLat,
+      officeLon,
+      this.ALLOWED_RADIUS,
+    );
+
+    if (!isWithinRadius) {
+      throw new HttpException(
+        {
+          error: 'You are too far from the office.',
+          distance,
+          allowedRadius: this.ALLOWED_RADIUS,
+          statusCode: HttpStatus.BAD_REQUEST,
+        },
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
     const [hasCheckedIn, hasCheckedOut] = await Promise.all([
       this.hasCheckedIn(id),
       this.hasCheckedOut(id),
