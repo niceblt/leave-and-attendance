@@ -1,7 +1,15 @@
-import { Controller, Get, HttpCode, HttpStatus, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Post,
+} from '@nestjs/common';
 import { Role } from 'src/iam/authorization/decorators/role.decorator';
 import { ActiveUser } from 'src/iam/decorators/active-user.decorator';
 import { AttendanceService } from './attendance.service';
+import { RequestDto } from './dto/request.dto';
 
 @Controller('attendance')
 @Role('EMPLOYEE', 'HR')
@@ -10,13 +18,13 @@ export class AttendanceController {
 
   @HttpCode(HttpStatus.OK)
   @Post('check-in')
-  checkIn(@ActiveUser('sub') id: string) {
+  checkIn(@ActiveUser('sub') id: string, @Body() requestDto: RequestDto) {
     return this.attendanceService.checkIn(id);
   }
 
   @HttpCode(HttpStatus.OK)
   @Post('check-out')
-  checkOut(@ActiveUser('sub') id: string) {
+  checkOut(@ActiveUser('sub') id: string, @Body() requestDto: RequestDto) {
     return this.attendanceService.checkOut(id);
   }
 
