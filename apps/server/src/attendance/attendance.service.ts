@@ -173,27 +173,23 @@ export class AttendanceService {
   }
 
   private async hasCheckedIn(id: string) {
-    const today = new Date();
-    const startOfToday = new Date(today.setHours(0, 0, 0, 0));
-    const endOfToday = new Date(today.setDate(today.getDate() + 1));
+    const { start, end } = this.getTodayRange();
     return await this.prismaService.attendance.findFirst({
       where: {
         userId: id,
         checkInTime: { not: null },
-        createdAt: { lte: endOfToday, gte: startOfToday },
+        createdAt: { lte: end, gte: start },
       },
     });
   }
 
   private async hasCheckedOut(id: string) {
-    const today = new Date();
-    const startOfToday = new Date(today.setHours(0, 0, 0, 0));
-    const endOfToday = new Date(today.setDate(today.getDate() + 1));
+    const { start, end } = this.getTodayRange();
     return await this.prismaService.attendance.findFirst({
       where: {
         userId: id,
         checkOutTime: { not: null },
-        createdAt: { lte: endOfToday, gte: startOfToday },
+        createdAt: { lte: end, gte: start },
       },
     });
   }
@@ -210,5 +206,15 @@ export class AttendanceService {
         return AttendanceStatus.LESS_THAN_HALF_DAY;
       }
     }
+  }
+
+  private getTodayRange(): { start: Date; end: Date } {
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+
+    const end = new Date(start);
+    end.setDate(end.getDate() + 1);
+
+    return { start, end };
   }
 }
