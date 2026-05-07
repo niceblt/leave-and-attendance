@@ -9,14 +9,14 @@ import {
 import { AttendanceStatus } from 'src/generated/prisma/client';
 import { GeolocationService } from 'src/geolocation/geolocation.service';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { TimeService } from 'src/time/time.service';
 import { RequestDto } from './dto/request.dto';
 
 @Injectable()
 export class AttendanceService {
-  readonly MINIMUM_CHECK_IN_TIME = new Date().setHours(8, 30, 0, 0);
-  readonly LATE_CHECK_IN_TIME = new Date().setHours(9, 15, 0, 0);
   readonly ONE_HOUR_IN_MILISECOND = 3_600_000;
   readonly MINIMUM_WORK_HOURS = this.ONE_HOUR_IN_MILISECOND * 9;
+  readonly HALF_MINIMUM_WORK_HOURS = this.MINIMUM_WORK_HOURS / 2;
   readonly ALLOWED_RADIUS = 100;
 
   // TODO: 1. Make the time things its own module
@@ -24,12 +24,13 @@ export class AttendanceService {
   // 3.
   constructor(
     private readonly prismaService: PrismaService,
-    private readonly geolocation: GeolocationService,
+    private readonly geolocationService: GeolocationService,
+    private readonly timeService: TimeService,
   ) {}
   async checkIn(id: string, requestDto: RequestDto) {
     const { lat, lon } = requestDto;
     const now = new Date();
-    if (now.getTime() < this.MINIMUM_CHECK_IN_TIME) {
+    if (now.getTime() < this.timeService.getMinimumCheckInTime()) {
       throw new UnauthorizedException('You are not allowed to check in early');
     }
 
@@ -38,7 +39,7 @@ export class AttendanceService {
       throw new BadRequestException('Office not found');
     }
     const { latitude: officeLat, longitude: officeLon } = officeLocation;
-    const { isWithinRadius, distance } = this.geolocation.isWithinRadius(
+    const { isWithinRadius, distance } = this.geolocationService.isWithinRadius(
       lat,
       lon,
       officeLat,
@@ -113,9 +114,9 @@ export class AttendanceService {
       where: { id: hasCheckedIn.id },
       data: {
         checkOutTime: currentTime,
-        checkOutLng: 1,
+        checkOutLng: lon,
         checkOutDistance: 1,
-        checkOutLat: 1,
+        checkOutLat: lat,
         status: { push: this.evaluate(hasCheckedIn.checkInTime!, currentTime) },
       },
       select: { id: true, checkInTime: true, checkOutTime: true, status: true },
@@ -130,7 +131,7 @@ export class AttendanceService {
 
   async status(id: string) {
     return {
-      minimumCheckInTime: this.MINIMUM_CHECK_IN_TIME,
+      minimumCheckInTime: this.timeService.getMinimumCheckInTime,
       hasCheckedIn: (await this.hasCheckedIn(id)) ? true : false,
       hasCheckedOut: (await this.hasCheckedOut(id)) ? true : false,
     };
@@ -168,10 +169,7 @@ export class AttendanceService {
 
       if (workTime >= this.MINIMUM_WORK_HOURS) {
         return AttendanceStatus.PRESENT;
-      } else if (
-        workTime >= this.MINIMUM_CHECK_IN_TIME / 2 &&
-        workTime < this.MINIMUM_CHECK_IN_TIME
-      ) {
+      } else if (workTime < this.HALF_MINIMUM_WORK_HOURS) {
         return AttendanceStatus.HALF_DAY;
       } else {
         return AttendanceStatus.LESS_THAN_HALF_DAY;

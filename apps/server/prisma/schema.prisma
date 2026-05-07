@@ -53,6 +53,7 @@ enum AttendanceStatus {
   LATE // Check-in after 9:00 AM
   ABSENT // No check-in
   HALF_DAY // Only check-in OR check-out
+  LESS_THAN_HALF_DAY
 }
 
 model Attendance {
@@ -70,7 +71,7 @@ model Attendance {
   checkOutLng      Float?
   checkOutDistance Float?
 
-  status AttendanceStatus @default(PRESENT)
+  status AttendanceStatus[] @default([])
   notes  String?
 
   officeLocationId String?

@@ -4,10 +4,10 @@ import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { AttendanceModule } from './attendance/attendance.module';
 import { IamModule } from './iam/iam.module';
 import { PrismaService } from './prisma/prisma.service';
 import { UsersModule } from './users/users.module';
-import { AttendanceModule } from './attendance/attendance.module';
 
 @Module({
   imports: [

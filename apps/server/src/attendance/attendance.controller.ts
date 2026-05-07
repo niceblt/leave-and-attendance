@@ -19,13 +19,13 @@ export class AttendanceController {
   @HttpCode(HttpStatus.OK)
   @Post('check-in')
   checkIn(@ActiveUser('sub') id: string, @Body() requestDto: RequestDto) {
-    return this.attendanceService.checkIn(id);
+    return this.attendanceService.checkIn(id, requestDto);
   }
 
   @HttpCode(HttpStatus.OK)
   @Post('check-out')
   checkOut(@ActiveUser('sub') id: string, @Body() requestDto: RequestDto) {
-    return this.attendanceService.checkOut(id);
+    return this.attendanceService.checkOut(id, requestDto);
   }
 
   @HttpCode(HttpStatus.OK)
