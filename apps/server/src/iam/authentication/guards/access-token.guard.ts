@@ -1,13 +1,13 @@
 import {
   CanActivate,
   ExecutionContext,
+  HttpStatus,
   Inject,
   Injectable,
-  UnauthorizedException,
 } from '@nestjs/common';
 import type { ConfigType } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { Request } from 'express';
+import { Request, Response } from 'express';
 import jwtConfig from 'src/iam/config/jwt.config';
 import { REQUEST_USER_KEY } from 'src/iam/iam.constants';
 @Injectable()
@@ -19,10 +19,14 @@ export class AccessTokenGuard implements CanActivate {
   ) {}
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
+    const response = context.switchToHttp().getResponse() as Response;
     const token = this.extractTokenFromHeader(request);
 
     if (token === undefined) {
-      throw new UnauthorizedException();
+      response.clearCookie('access_token');
+      response.clearCookie('refresh_token');
+      response.sendStatus(HttpStatus.UNAUTHORIZED);
+      return false;
     }
 
     // To-do: Enforce changing password if it's a new user
@@ -35,7 +39,10 @@ export class AccessTokenGuard implements CanActivate {
 
       request[REQUEST_USER_KEY] = payload;
     } catch (error) {
-      throw new UnauthorizedException();
+      response.clearCookie('access_token');
+      response.clearCookie('refresh_token');
+      response.sendStatus(HttpStatus.UNAUTHORIZED);
+      return false;
     }
 
     return true;

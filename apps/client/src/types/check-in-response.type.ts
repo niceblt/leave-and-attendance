@@ -1,4 +1,4 @@
-export interface CheckInResponse {
+export default interface CheckInResponse {
   attendance: {
     id: string;
     checkInTime: string;

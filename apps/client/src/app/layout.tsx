@@ -1,6 +1,8 @@
 import { AuthProvider } from "@/providers/AuthProvider";
+import { GeolocationProvider } from "@/providers/GeolocationProvider";
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import { Toaster } from "react-hot-toast";
 import "./globals.css";
 const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
@@ -15,8 +17,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${inter.className} h-full antialiased`}>
-      <body className="min-h-full h-full">
-        <AuthProvider>{children}</AuthProvider>
+      <body className="h-full min-h-full">
+        <GeolocationProvider>
+          <AuthProvider>
+            {children}
+            <Toaster position="bottom-right" reverseOrder={true} />
+          </AuthProvider>
+        </GeolocationProvider>
       </body>
     </html>
   );

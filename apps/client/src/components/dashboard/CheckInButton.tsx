@@ -1,12 +1,15 @@
 import useCheckIn from "@/hooks/useCheckIn";
+import GeolocationResponse from "@/types/geolocation.type";
 
 export default function CheckInButton({
   hasCheckedIn,
+  cords,
 }: {
   hasCheckedIn: boolean | undefined;
+  cords: GeolocationResponse | undefined;
 }) {
   const { handleCheckIn } = useCheckIn();
-  if (hasCheckedIn) {
+  if (hasCheckedIn || !cords) {
     return (
       <button
         className="flex-1 cursor-not-allowed rounded-md bg-gray-300 py-3 font-bold text-white"

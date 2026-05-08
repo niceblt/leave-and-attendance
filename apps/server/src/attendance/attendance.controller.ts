@@ -24,7 +24,10 @@ export class AttendanceController {
 
   @HttpCode(HttpStatus.OK)
   @Post('check-out')
-  checkOut(@ActiveUser('sub') id: string, @Body() requestDto: RequestDto) {
+  async checkOut(
+    @ActiveUser('sub') id: string,
+    @Body() requestDto: RequestDto,
+  ) {
     return this.attendanceService.checkOut(id, requestDto);
   }
 

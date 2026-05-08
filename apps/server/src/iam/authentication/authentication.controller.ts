@@ -25,8 +25,6 @@ export class AuthenticationController {
   // @Throttle({ default: { ttl: 600000, limit: 5 } })
   @Auth(AuthType.None)
   async signIn(@Body() signInDto: SignInDto, @Res() response: Response) {
-    console.log(signInDto);
-
     const result = await this.authenticationService.signIn(signInDto);
     response.cookie('access_token', result.accessToken);
     response.cookie('refresh_token', result.refreshToken);

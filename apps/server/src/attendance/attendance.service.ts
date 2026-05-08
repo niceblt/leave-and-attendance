@@ -18,11 +18,8 @@ export class AttendanceService {
   readonly ONE_HOUR_IN_MILISECOND = 3_600_000;
   readonly MINIMUM_WORK_HOURS = this.ONE_HOUR_IN_MILISECOND * 9;
   readonly HALF_MINIMUM_WORK_HOURS = this.MINIMUM_WORK_HOURS / 2;
-  readonly ALLOWED_RADIUS = 100;
+  readonly ALLOWED_RADIUS = 1000;
 
-  // TODO: 1. Make the time things its own module
-  // 2. Validate with geolocation
-  // 3.
   constructor(
     private readonly prismaService: PrismaService,
     private readonly geolocationService: GeolocationService,

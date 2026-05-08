@@ -2,7 +2,6 @@ import {
   Body,
   Inject,
   Injectable,
-  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import type { ConfigType } from '@nestjs/config';
@@ -34,7 +33,6 @@ export class AuthenticationService {
 
   async signIn(@Body() signInDto: SignInDto) {
     const { email, password } = signInDto;
-    console.log('hello world');
     const user = await this.prismaService.user.findFirst({
       where: { email: email },
       select: {
@@ -73,10 +71,6 @@ export class AuthenticationService {
         lastName: true,
       },
     });
-
-    if (user === undefined) {
-      throw new NotFoundException();
-    }
 
     return { user };
   }
